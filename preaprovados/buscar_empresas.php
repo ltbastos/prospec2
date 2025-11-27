@@ -130,7 +130,7 @@ $listaSql = "SELECT
               FROM d_empresas e
               INNER JOIN (" . $subPreaprovados . ") fp ON fp.cnpj = e.cnpj
               WHERE 1=1" . $condicoesEmpresa . "
-              ORDER BY e.razao_social
+              ORDER BY e.cnpj
               LIMIT ? OFFSET ?";
 
 $paramsLista = [];

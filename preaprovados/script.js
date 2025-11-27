@@ -39,6 +39,94 @@ const PRODUCT_COLORS = [
   "#4b5563"
 ];
 const productColorMap = new Map();
+const EMPRESAS_FIXAS = [
+  {
+    cnpj: "00000000000191",
+    razao_social: "Empresa Exemplo Alpha",
+    estado: "SP",
+    cidade: "São Paulo",
+    bairro: "Centro",
+    produtos: [
+      { nome: "Capital de Giro PJ", valor: 150000 },
+      { nome: "Conta Garantida", valor: 80000 }
+    ]
+  },
+  {
+    cnpj: "00000000000272",
+    razao_social: "Empresa Exemplo Beta",
+    estado: "RJ",
+    cidade: "Rio de Janeiro",
+    bairro: "Botafogo",
+    produtos: [{ nome: "Cartão Empresarial", valor: 20000 }]
+  },
+  {
+    cnpj: "00000000000353",
+    razao_social: "Empresa Exemplo Gamma",
+    estado: "MG",
+    cidade: "Belo Horizonte",
+    bairro: "Savassi",
+    produtos: [
+      { nome: "Antecipação de Recebíveis", valor: 120000 },
+      { nome: "Capital de Giro PJ", valor: 70000 }
+    ]
+  },
+  {
+    cnpj: "00000000000434",
+    razao_social: "Empresa Exemplo Delta",
+    estado: "PR",
+    cidade: "Curitiba",
+    bairro: "Batel",
+    produtos: [{ nome: "Financiamento", valor: 300000 }]
+  },
+  {
+    cnpj: "00000000000515",
+    razao_social: "Empresa Exemplo Épsilon",
+    estado: "RS",
+    cidade: "Porto Alegre",
+    bairro: "Moinhos de Vento",
+    produtos: [{ nome: "Leasing", valor: 95000 }]
+  },
+  {
+    cnpj: "00000000000696",
+    razao_social: "Empresa Exemplo Zeta",
+    estado: "BA",
+    cidade: "Salvador",
+    bairro: "Barra",
+    produtos: [{ nome: "Conta Garantida", valor: 40000 }]
+  },
+  {
+    cnpj: "00000000000777",
+    razao_social: "Empresa Exemplo Eta",
+    estado: "PE",
+    cidade: "Recife",
+    bairro: "Boa Viagem",
+    produtos: [{ nome: "Capital de Giro PJ", valor: 60000 }]
+  },
+  {
+    cnpj: "00000000000858",
+    razao_social: "Empresa Exemplo Theta",
+    estado: "CE",
+    cidade: "Fortaleza",
+    bairro: "Meireles",
+    produtos: [{ nome: "Cartão Empresarial", valor: 25000 }]
+  },
+  {
+    cnpj: "00000000000939",
+    razao_social: "Empresa Exemplo Iota",
+    estado: "DF",
+    cidade: "Brasília",
+    bairro: "Asa Sul",
+    produtos: [{ nome: "Antecipação de Recebíveis", valor: 50000 }]
+  },
+  {
+    cnpj: "00000000001010",
+    razao_social: "Empresa Exemplo Kappa",
+    estado: "SC",
+    cidade: "Florianópolis",
+    bairro: "Centro",
+    produtos: [{ nome: "Financiamento", valor: 180000 }]
+  }
+];
 
 /* ---------- HELPERS ---------- */
 
@@ -293,6 +381,20 @@ async function buscarSugestoes(query) {
   } finally {
     mostrarInlineSpinner(false);
   }
+}
+
+function mostrarEmpresasFixas() {
+  empresasCache = EMPRESAS_FIXAS;
+  paginaAtual = 1;
+  totalPaginas = 1;
+  totalResultados = EMPRESAS_FIXAS.length;
+  atualizarResultados(EMPRESAS_FIXAS, {
+    total: EMPRESAS_FIXAS.length,
+    pagina: 1,
+    totalPaginas: 1
+  });
+  atualizarGrafico(EMPRESAS_FIXAS);
+  atualizarPaginacao();
 }
 
 if (campoBusca) {
@@ -607,7 +709,7 @@ if (btnLimparFiltros) {
     }
     sessionStorage.removeItem(STORAGE_KEY);
     paginaAtual = 1;
-    buscarEmpresasApi(paginaAtual);
+    mostrarEmpresasFixas();
   });
 }
 
@@ -692,6 +794,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   startLoading();
   await Promise.all([carregarEstados(), carregarProdutos(), carregarCnaes()]);
   await restaurarFiltros();
-  await buscarEmpresasApi(paginaAtual);
+  const salvo = recuperarFiltrosEstado();
+  const temFiltrosSalvos =
+    salvo &&
+    Object.keys(salvo).length > 0 &&
+    (salvo.estado || salvo.cidade || salvo.bairro || salvo.cnae || salvo.produto || salvo.pagina > 1);
+
+  if (temFiltrosSalvos) {
+    await buscarEmpresasApi(paginaAtual);
+  } else {
+    mostrarEmpresasFixas();
+  }
   stopLoading();
 });
