@@ -24,64 +24,56 @@ if (strlen($cnpjLimpo) !== 14) {
     die('CNPJ inválido.');
 }
 
-// Dados da empresa
+// Monta SELECT apenas com colunas existentes para evitar falhas em bases com schema diferente
+$colunasDesejadas = [
+    'cnpj', 'razao_social', 'porte', 'estado', 'cidade', 'bairro', 'rua', 'numero',
+    'complemento', 'email', 'ddd', 'celular', 'telefone', 'cod_cnae', 'cnae', 'latitude', 'longitude'
+];
+
+$placeholdersCols = implode(',', array_fill(0, count($colunasDesejadas), '?'));
+$sqlCols = "SELECT COLUMN_NAME FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = ?
+              AND TABLE_NAME   = 'd_empresas'
+              AND COLUMN_NAME IN ($placeholdersCols)";
+
+$stmtCols = $mysqli->prepare($sqlCols);
+$colunasDisponiveis = [];
+
+if ($stmtCols) {
+    $typesCols = str_repeat('s', count($colunasDesejadas) + 1);
+    $paramsCols = array_merge([$db], $colunasDesejadas);
+    $stmtCols->bind_param($typesCols, ...$paramsCols);
+    $stmtCols->execute();
+    $resCols = $stmtCols->get_result();
+    while ($row = $resCols->fetch_assoc()) {
+        $colunasDisponiveis[] = $row['COLUMN_NAME'];
+    }
+    $stmtCols->close();
+}
+
+// Mantém a ordem original e inclui colunas essenciais mesmo que ausentes
+$colunasDisponiveis = array_values(array_intersect($colunasDesejadas, $colunasDisponiveis));
+if (!in_array('cnpj', $colunasDisponiveis, true)) {
+    array_unshift($colunasDisponiveis, 'cnpj');
+}
+if (!in_array('razao_social', $colunasDisponiveis, true)) {
+    $colunasDisponiveis[] = 'razao_social';
+}
+
+$listaColunas = implode(",\n      ", $colunasDisponiveis);
 $sqlEmpresa = "
     SELECT
-      cnpj,
-      razao_social,
-      porte,
-      estado,
-      cidade,
-      bairro,
-      rua,
-      numero,
-      complemento,
-      email,
-      ddd,
-      celular,
-      telefone,
-      cod_cnae,
-      cnae,
-      latitude,
-      longitude
+      $listaColunas
     FROM d_empresas
     WHERE cnpj = ?
     LIMIT 1
 ";
+
 $stmtEmp = $mysqli->prepare($sqlEmpresa);
 
 if (!$stmtEmp) {
-    // Fallback para bases que não trazem colunas de CNAE; mantém fluxo funcionando
-    error_log('Erro ao preparar consulta de empresa (com CNAE): ' . $mysqli->error);
-
-    $sqlEmpresa = "
-        SELECT
-          cnpj,
-          razao_social,
-          porte,
-          estado,
-          cidade,
-          bairro,
-          rua,
-          numero,
-          complemento,
-          email,
-          ddd,
-          celular,
-          telefone,
-          latitude,
-          longitude
-        FROM d_empresas
-        WHERE cnpj = ?
-        LIMIT 1
-    ";
-
-    $stmtEmp = $mysqli->prepare($sqlEmpresa);
-
-    if (!$stmtEmp) {
-        error_log('Erro ao preparar consulta fallback de empresa: ' . $mysqli->error);
-        die('Não foi possível carregar os dados da empresa.');
-    }
+    error_log('Erro ao preparar consulta de empresa dinâmica: ' . $mysqli->error);
+    die('Não foi possível carregar os dados da empresa.');
 }
 
 $stmtEmp->bind_param('s', $cnpjLimpo);
@@ -95,9 +87,12 @@ if (!$empresa) {
     die('Empresa não encontrada.');
 }
 
-// Garante chaves ausentes no fallback
-$empresa['cod_cnae'] = $empresa['cod_cnae'] ?? '';
-$empresa['cnae']     = $empresa['cnae'] ?? '';
+// Garante chaves ausentes para evitar erros de índice
+foreach ($colunasDesejadas as $col) {
+    if (!array_key_exists($col, $empresa)) {
+        $empresa[$col] = '';
+    }
+}
 
 // Produtos pré-aprovados
 $sqlProd = "
