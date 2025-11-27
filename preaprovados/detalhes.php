@@ -239,7 +239,226 @@ function formatarMoeda($valor) {
         </table>
       <?php endif; ?>
     </section>
+
+    <section class="card" style="margin-top:14px;">
+      <div class="side-card-title">Comentários sobre a prospecção</div>
+
+      <form id="form-comentario" class="comment-form">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="comentario-nome">Nome</label>
+            <input
+              type="text"
+              id="comentario-nome"
+              name="nome"
+              maxlength="200"
+              required
+              placeholder="Quem está registrando"
+            />
+          </div>
+          <div class="form-field">
+            <label for="comentario-juncao">Junção/Equipe</label>
+            <input
+              type="text"
+              id="comentario-juncao"
+              name="juncao"
+              maxlength="255"
+              placeholder="Ex.: Comercial SP, Squad PJ"
+            />
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="comentario-texto">Resumo</label>
+          <textarea
+            id="comentario-texto"
+            name="comentario"
+            rows="4"
+            maxlength="4000"
+            required
+            placeholder="Ex.: Visitado em 20/01, cliente pediu simulação de capital de giro"
+          ></textarea>
+        </div>
+
+        <div class="comment-actions">
+          <button type="submit" class="btn-primary" id="btn-adicionar-comentario">
+            Adicionar comentário
+          </button>
+        </div>
+      </form>
+
+      <div id="comentarios-lista" class="comments-list">
+        <p class="helper-text" style="margin-bottom:0;">Carregando comentários...</p>
+      </div>
+    </section>
   </main>
+
+  <script>
+    const cnpjEmpresa = <?php echo json_encode($empresa['cnpj']); ?>;
+    const comentariosLista = document.getElementById("comentarios-lista");
+    const formComentario = document.getElementById("form-comentario");
+    const btnAdicionarComentario = document.getElementById("btn-adicionar-comentario");
+
+    function formatarDataComentario(dataStr) {
+      if (!dataStr) return "";
+      const data = new Date(dataStr.replace(" ", "T"));
+      if (isNaN(data.getTime())) return dataStr;
+      return data.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function renderizarComentarios(lista) {
+      if (!comentariosLista) return;
+      comentariosLista.innerHTML = "";
+
+      if (!lista || !lista.length) {
+        comentariosLista.innerHTML =
+          '<p class="empty-state">Nenhum comentário registrado ainda.</p>';
+        return;
+      }
+
+      lista.forEach((c) => {
+        const item = document.createElement("div");
+        item.className = "comment-item";
+
+        const header = document.createElement("div");
+        header.className = "comment-header";
+
+        const author = document.createElement("div");
+        author.className = "comment-author";
+        author.textContent = c.nome;
+
+        const meta = document.createElement("div");
+        meta.className = "comment-meta";
+        const juncaoLabel = c.juncao ? `${c.juncao} • ` : "";
+        meta.textContent = `${juncaoLabel}${formatarDataComentario(c.data)}`;
+
+        const btnDelete = document.createElement("button");
+        btnDelete.className = "comment-delete";
+        btnDelete.type = "button";
+        btnDelete.textContent = "Excluir";
+        btnDelete.dataset.idComentario = c.id;
+
+        header.appendChild(author);
+        header.appendChild(meta);
+        header.appendChild(btnDelete);
+
+        const corpo = document.createElement("p");
+        corpo.className = "comment-body";
+        corpo.textContent = c.comentario;
+
+        item.appendChild(header);
+        item.appendChild(corpo);
+        comentariosLista.appendChild(item);
+      });
+    }
+
+    async function carregarComentarios() {
+      if (!cnpjEmpresa) return;
+      try {
+        const resp = await fetch(
+          "comentarios.php?cnpj=" + encodeURIComponent(cnpjEmpresa)
+        );
+        const data = await resp.json();
+        if (!resp.ok) {
+          console.error(data);
+          comentariosLista.innerHTML =
+            '<p class="empty-state">Não foi possível carregar os comentários.</p>';
+          return;
+        }
+        renderizarComentarios(data.comentarios || []);
+      } catch (err) {
+        console.error(err);
+        comentariosLista.innerHTML =
+          '<p class="empty-state">Erro ao carregar comentários.</p>';
+      }
+    }
+
+    async function adicionarComentario(event) {
+      event.preventDefault();
+      if (!formComentario || !btnAdicionarComentario) return;
+
+      const nome = document.getElementById("comentario-nome").value.trim();
+      const juncao = document.getElementById("comentario-juncao").value.trim();
+      const comentario = document.getElementById("comentario-texto").value.trim();
+
+      if (!nome || !comentario) {
+        alert("Preencha nome e comentário.");
+        return;
+      }
+
+      btnAdicionarComentario.disabled = true;
+
+      try {
+        const resp = await fetch("comentarios.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ cnpj: cnpjEmpresa, nome, juncao, comentario })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          console.error(data);
+          alert(data.mensagem || "Erro ao salvar comentário.");
+          return;
+        }
+        formComentario.reset();
+        await carregarComentarios();
+      } catch (err) {
+        console.error(err);
+        alert("Falha na comunicação ao salvar comentário.");
+      } finally {
+        btnAdicionarComentario.disabled = false;
+      }
+    }
+
+    async function removerComentario(id) {
+      if (!id) return;
+      try {
+        const body = new URLSearchParams();
+        body.append("id", id);
+        body.append("cnpj", cnpjEmpresa);
+        const resp = await fetch("comentarios.php", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          console.error(data);
+          alert(data.mensagem || "Não foi possível excluir o comentário.");
+          return;
+        }
+        await carregarComentarios();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao excluir comentário.");
+      }
+    }
+
+    if (formComentario) {
+      formComentario.addEventListener("submit", adicionarComentario);
+    }
+
+    if (comentariosLista) {
+      comentariosLista.addEventListener("click", (event) => {
+        const btn = event.target.closest("[data-id-comentario]");
+        if (btn) {
+          removerComentario(btn.dataset.idComentario);
+        }
+      });
+    }
+
+    carregarComentarios();
+  </script>
 
   <?php if ($temCoordenadas): ?>
   <!-- Leaflet JS -->
