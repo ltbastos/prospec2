@@ -125,7 +125,16 @@ async function buscarEmpresasApi(pagina = 1) {
   startLoading();
   try {
     const resp = await fetch(url);
-    const data = await resp.json();
+    const rawText = await resp.text();
+
+    let data;
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (parseErr) {
+      console.error("Resposta não é JSON válido", rawText);
+      alert("Resposta inesperada do servidor.");
+      return;
+    }
 
     if (!resp.ok) {
       console.error(data);
