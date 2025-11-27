@@ -100,6 +100,16 @@ function getProductColor(nome) {
   return color;
 }
 
+function navegarParaDetalhes(cnpj) {
+  if (!cnpj) return;
+
+  startLoading();
+  // Permite que o overlay apareça antes da navegação
+  requestAnimationFrame(() => {
+    window.location.href = `detalhes.php?cnpj=${encodeURIComponent(cnpj)}`;
+  });
+}
+
 function showToast(message, type = "error", title = "Aviso") {
   const container = document.getElementById("toast-container");
   if (!container) {
@@ -295,6 +305,11 @@ function atualizarResultados(lista, meta = {}) {
     const card = document.createElement("a");
     card.className = "result-card";
     card.href = `detalhes.php?cnpj=${encodeURIComponent(e.cnpj)}`;
+    card.addEventListener("click", (ev) => {
+      if (ev.ctrlKey || ev.metaKey || ev.button === 1) return;
+      ev.preventDefault();
+      navegarParaDetalhes(e.cnpj);
+    });
 
     const chipsHtml = (e.produtos || [])
       .map((p) => {
@@ -348,8 +363,8 @@ function preencherAutocomplete(lista) {
       <span>${e.cnpj} • ${e.cidade || ""} - ${e.estado || ""}</span>
     `;
     item.addEventListener("click", () => {
-      // clique na sugestão vai DIRETO para detalhes
-      window.location.href = `detalhes.php?cnpj=${encodeURIComponent(e.cnpj)}`;
+      // clique na sugestão vai DIRETO para detalhes, mostrando loading
+      navegarParaDetalhes(e.cnpj);
     });
     listaAutocomplete.appendChild(item);
   });
