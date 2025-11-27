@@ -33,7 +33,8 @@ $porPagina = $porPagina > 0 ? $porPagina : 20;
 if ($inicial) {
     $limiteInicial = 10;
 
-    // Carregamento inicial simplificado: apenas 10 empresas reais que já têm pré-aprovados
+    // Carregamento inicial simplificado: apenas 10 empresas reais que já têm pré-aprovados,
+    // usando uma lista pré-filtrada direto de f_preaprovados para evitar varreduras completas
     $sqlInicial = "SELECT
                         e.cnpj,
                         e.razao_social,
@@ -41,14 +42,14 @@ if ($inicial) {
                         e.cidade,
                         e.bairro,
                         e.porte
-                    FROM d_empresas e
-                    WHERE EXISTS (
-                        SELECT 1
+                    FROM (
+                        SELECT DISTINCT fp.cnpj
                         FROM f_preaprovados fp
-                        WHERE fp.cnpj = e.cnpj
-                    )
-                    ORDER BY e.cnpj
-                    LIMIT ?";
+                        ORDER BY fp.cnpj
+                        LIMIT ?
+                    ) fp
+                    INNER JOIN d_empresas e ON e.cnpj = fp.cnpj
+                    ORDER BY e.cnpj";
 
     $stmtInicial = $mysqli->prepare($sqlInicial);
     if (!$stmtInicial) {
