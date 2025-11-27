@@ -30,6 +30,16 @@ $inicial = isset($_GET['inicial']) && $_GET['inicial'] === '1';
 $pagina = $pagina > 0 ? $pagina : 1;
 $porPagina = $porPagina > 0 ? $porPagina : 20;
 
+// exige pelo menos cidade quando não for busca direta por CNPJ
+$cnpjSomenteDigitos = preg_replace('/\D+/', '', $q);
+$isBuscaCnpjDireta = strlen($cnpjSomenteDigitos) === 14;
+
+if (!$inicial && !$isBuscaCnpjDireta && $cidade === '') {
+    http_response_code(400);
+    echo json_encode(['erro' => 'Selecione ao menos a cidade ou informe um CNPJ para pesquisar.']);
+    exit;
+}
+
 if ($inicial) {
     $limiteInicial = 10;
 

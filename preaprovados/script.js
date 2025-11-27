@@ -103,12 +103,22 @@ function getProductColor(nome) {
 /* ---------- CHAMADA API EMPRESAS (lista/filtros) ---------- */
 
 async function buscarEmpresasApi(pagina = 1) {
+  const buscaTexto = campoBusca ? campoBusca.value.trim() : "";
   const estado = filtroEstado ? filtroEstado.value : "";
   const cidade = filtroCidade ? filtroCidade.value : "";
   const bairro = filtroBairro ? filtroBairro.value : "";
   const produto = filtroProduto ? filtroProduto.value : "";
 
+  const cnpjDigits = buscaTexto.replace(/\D+/g, "");
+  const isCnpjDireto = cnpjDigits.length === 14;
+
+  if (!isCnpjDireto && !cidade) {
+    alert("Selecione ao menos a cidade ou informe um CNPJ completo para pesquisar.");
+    return;
+  }
+
   const params = new URLSearchParams();
+  if (buscaTexto) params.append("q", buscaTexto);
   if (estado) params.append("estado", estado);
   if (cidade) params.append("cidade", cidade);
   if (bairro) params.append("bairro", bairro);
@@ -135,7 +145,7 @@ async function buscarEmpresasApi(pagina = 1) {
 
     if (!resp.ok) {
       console.error(data);
-      alert("Erro ao buscar empresas.");
+      alert(data?.erro || "Erro ao buscar empresas.");
       return;
     }
 
@@ -145,6 +155,7 @@ async function buscarEmpresasApi(pagina = 1) {
     totalResultados = data.total ?? empresasCache.length;
 
     salvarFiltrosEstado({
+      busca: buscaTexto,
       estado,
       cidade,
       bairro,
@@ -669,6 +680,10 @@ async function restaurarFiltros() {
 
   if (filtroProduto && salvo.produto) {
     filtroProduto.value = salvo.produto;
+  }
+
+  if (campoBusca && salvo.busca) {
+    campoBusca.value = salvo.busca;
   }
 
   if (salvo.pagina) {
