@@ -9,6 +9,14 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+  <div id="loading-overlay" class="loading-overlay" aria-hidden="true">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <div class="loading-text">Carregando...</div>
+    </div>
+  </div>
+
   <header class="app-header">
     <div class="app-header-inner">
       <div class="brand">
@@ -45,34 +53,56 @@
                   placeholder="Digite CNPJ ou nome da empresa..."
                   autocomplete="off"
                 />
+                <div id="inline-spinner" class="inline-spinner" aria-hidden="true"></div>
                 <div class="search-icon">🔍</div>
 
                 <div id="autocomplete-list" class="autocomplete-list"></div>
               </div>
+            </div>
 
-              <div class="select">
-                <label for="filtro-estado">Estado</label>
-                <select id="filtro-estado">
-                  <option value="">Todos</option>
-                </select>
-              </div>
+            <div class="filters-toggle">
+              <button type="button" id="btn-toggle-filtros" class="toggle-filtros">
+                <span class="toggle-icon" aria-hidden="true">▼</span>
+                Filtros avançados
+              </button>
+            </div>
 
-              <div class="select">
-                <label for="filtro-cidade">Cidade</label>
-                <select id="filtro-cidade">
-                  <option value="">Todas</option>
-                </select>
-              </div>
+            <div id="filtros-colapsaveis" class="filters-collapsible">
+              <div class="filters-grid">
+                <div class="select">
+                  <label for="filtro-estado">Estado</label>
+                  <select id="filtro-estado">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
 
-              <div class="select">
-                <label for="filtro-bairro">Bairro</label>
-                <select id="filtro-bairro">
-                  <option value="">Todos</option>
-                </select>
+                <div class="select">
+                  <label for="filtro-cidade">Cidade</label>
+                  <select id="filtro-cidade">
+                    <option value="">Todas</option>
+                  </select>
+                </div>
+
+                <div class="select">
+                  <label for="filtro-bairro">Bairro</label>
+                  <select id="filtro-bairro">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
+
+                <div class="select">
+                  <label for="filtro-produto">Produto</label>
+                  <select id="filtro-produto">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             <div class="search-actions">
+              <button type="button" id="btn-aplicar-filtros" class="btn-primary">
+                Aplicar filtros
+              </button>
               <button type="button" id="btn-limpar-filtros" class="btn-link">
                 Limpar filtros
               </button>
@@ -90,6 +120,16 @@
           </div>
 
           <div id="lista-resultados" class="results-list"></div>
+
+          <div class="pagination-bar">
+            <button type="button" id="btn-pagina-anterior" class="btn-secondary">
+              Anterior
+            </button>
+            <span id="pagination-info" class="pagination-info">Página 1 de 1</span>
+            <button type="button" id="btn-pagina-proxima" class="btn-secondary">
+              Próxima
+            </button>
+          </div>
         </section>
       </div>
 
