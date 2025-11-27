@@ -20,6 +20,10 @@ if ($cnpjLimpo === '') {
     die('CNPJ não informado.');
 }
 
+if (strlen($cnpjLimpo) !== 14) {
+    die('CNPJ inválido.');
+}
+
 // Dados da empresa
 $sqlEmpresa = "
     SELECT
@@ -41,14 +45,20 @@ $sqlEmpresa = "
       latitude,
       longitude
     FROM d_empresas
-    WHERE REPLACE(cnpj, '.', '') = ? OR cnpj = ?
+    WHERE cnpj = ?
     LIMIT 1
 ";
 $stmtEmp = $mysqli->prepare($sqlEmpresa);
-$stmtEmp->bind_param('ss', $cnpjLimpo, $cnpjLimpo);
+
+if (!$stmtEmp) {
+    error_log('Erro ao preparar consulta de empresa: ' . $mysqli->error);
+    die('Não foi possível carregar os dados da empresa.');
+}
+
+$stmtEmp->bind_param('s', $cnpjLimpo);
 $stmtEmp->execute();
 $resEmp = $stmtEmp->get_result();
-$empresa = $resEmp->fetch_assoc();
+$empresa = $resEmp ? $resEmp->fetch_assoc() : null;
 $stmtEmp->close();
 
 if (!$empresa) {
@@ -62,12 +72,18 @@ $sqlProd = "
       p.nome AS produto_nome,
       f.valor_pre_aprovado,
       f.data_referencia AS data_pre_aprovado
-    FROM f_preAprovados f
+    FROM f_preaprovados f
     JOIN d_produtos p ON p.id = f.id_produto
     WHERE f.cnpj = ?
     ORDER BY p.ordem, p.nome
 ";
 $stmtProd = $mysqli->prepare($sqlProd);
+
+if (!$stmtProd) {
+    error_log('Erro ao preparar consulta de produtos: ' . $mysqli->error);
+    die('Não foi possível carregar os produtos pré-aprovados.');
+}
+
 $stmtProd->bind_param('s', $empresa['cnpj']);
 $stmtProd->execute();
 $resProd = $stmtProd->get_result();

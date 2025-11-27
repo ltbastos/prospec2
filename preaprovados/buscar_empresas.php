@@ -77,7 +77,7 @@ $countSql = "SELECT COUNT(*) AS total
              FROM d_empresas e
              WHERE 1=1" . $condicoesEmpresa . "
              AND EXISTS (
-                SELECT 1 FROM f_preAprovados f
+                SELECT 1 FROM f_preaprovados f
                 WHERE f.cnpj = e.cnpj" . $condicoesProdutos . "
              )";
 
@@ -128,7 +128,7 @@ $listaSql = "SELECT
               FROM d_empresas e
               WHERE 1=1" . $condicoesEmpresa . "
               AND EXISTS (
-                SELECT 1 FROM f_preAprovados f
+                SELECT 1 FROM f_preaprovados f
                 WHERE f.cnpj = e.cnpj" . $condicoesProdutos . "
               )
               ORDER BY e.razao_social
@@ -183,7 +183,7 @@ $stmtLista->close();
 if (!empty($cnpjs)) {
     $placeholders = implode(',', array_fill(0, count($cnpjs), '?'));
     $prodSql = "SELECT f.cnpj, p.nome AS produto_nome, f.valor_pre_aprovado
-                FROM f_preAprovados f
+                FROM f_preaprovados f
                 JOIN d_produtos p ON p.id = f.id_produto
                 WHERE f.cnpj IN ($placeholders)";
 
