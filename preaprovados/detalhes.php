@@ -268,14 +268,15 @@ function formatarMoeda($valor) {
             />
           </div>
           <div class="form-field">
-            <label for="comentario-juncao">Junção/Equipe</label>
+            <label for="comentario-juncao">Junção</label>
             <input
               type="text"
               id="comentario-juncao"
               name="juncao"
               maxlength="255"
-              placeholder="Ex.: Comercial SP, Squad PJ"
+              placeholder="Ex.: 4160"
             />
+            <small class="helper-text">Informe a junção (opcional).</small>
           </div>
         </div>
 

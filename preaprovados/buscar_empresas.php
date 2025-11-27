@@ -22,6 +22,8 @@ $q      = isset($_GET['q'])      ? trim($_GET['q'])      : '';
 $estado = isset($_GET['estado']) ? trim($_GET['estado']) : '';
 $cidade = isset($_GET['cidade']) ? trim($_GET['cidade']) : '';
 $bairro = isset($_GET['bairro']) ? trim($_GET['bairro']) : '';
+$cnae   = isset($_GET['cnae'])   ? trim($_GET['cnae'])   : '';
+$produto = isset($_GET['produto']) ? (int) $_GET['produto'] : 0;
 $pagina = isset($_GET['pagina']) ? (int) $_GET['pagina'] : 1;
 $porPagina = isset($_GET['por_pagina']) ? (int) $_GET['por_pagina'] : 20;
 
@@ -54,6 +56,16 @@ if ($bairro !== '') {
     $condicoes .= " AND e.bairro = ?";
     $params[] = $bairro;
     $types   .= "s";
+}
+if ($cnae !== '') {
+    $condicoes .= " AND e.cod_cnae = ?";
+    $params[] = $cnae;
+    $types   .= "s";
+}
+if ($produto > 0) {
+    $condicoes .= " AND f.id_produto = ?";
+    $params[] = $produto;
+    $types   .= "i";
 }
 
 // total de empresas distintas

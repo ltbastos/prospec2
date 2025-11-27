@@ -57,26 +57,51 @@
 
                 <div id="autocomplete-list" class="autocomplete-list"></div>
               </div>
+            </div>
 
-              <div class="select">
-                <label for="filtro-estado">Estado</label>
-                <select id="filtro-estado">
-                  <option value="">Todos</option>
-                </select>
-              </div>
+            <div class="filters-toggle">
+              <button type="button" id="btn-toggle-filtros" class="toggle-filtros">
+                <span class="toggle-icon" aria-hidden="true">▼</span>
+                Filtros avançados
+              </button>
+            </div>
 
-              <div class="select">
-                <label for="filtro-cidade">Cidade</label>
-                <select id="filtro-cidade">
-                  <option value="">Todas</option>
-                </select>
-              </div>
+            <div id="filtros-colapsaveis" class="filters-collapsible">
+              <div class="filters-grid">
+                <div class="select">
+                  <label for="filtro-estado">Estado</label>
+                  <select id="filtro-estado">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
 
-              <div class="select">
-                <label for="filtro-bairro">Bairro</label>
-                <select id="filtro-bairro">
-                  <option value="">Todos</option>
-                </select>
+                <div class="select">
+                  <label for="filtro-cidade">Cidade</label>
+                  <select id="filtro-cidade">
+                    <option value="">Todas</option>
+                  </select>
+                </div>
+
+                <div class="select">
+                  <label for="filtro-bairro">Bairro</label>
+                  <select id="filtro-bairro">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
+
+                <div class="select">
+                  <label for="filtro-cnae">CNAE</label>
+                  <select id="filtro-cnae">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
+
+                <div class="select">
+                  <label for="filtro-produto">Produto</label>
+                  <select id="filtro-produto">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
               </div>
             </div>
 
