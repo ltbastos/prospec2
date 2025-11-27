@@ -413,6 +413,24 @@ body {
   outline: none;
 }
 
+.select.is-loading {
+  position: relative;
+}
+
+.select.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border: 2px solid #e5e7eb;
+  border-top-color: var(--bradesco-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 .filters-toggle {
   display: flex;
   justify-content: flex-end;

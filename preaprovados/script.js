@@ -570,14 +570,19 @@ async function carregarCidades(estado) {
     return;
   }
 
-  filtroCidade.disabled = false;
-  filtroCidade.innerHTML = '<option value="">Todas</option>';
+  const selectWrapper = filtroCidade.closest(".select");
+  if (selectWrapper) selectWrapper.classList.add("is-loading");
+  filtroCidade.disabled = true;
+  filtroCidade.innerHTML = '<option value="">Carregando cidades...</option>';
 
   try {
     const resp = await fetch(
       "filtros.php?tipo=cidades&estado=" + encodeURIComponent(estado)
     );
     const data = await resp.json();
+
+    filtroCidade.disabled = false;
+    filtroCidade.innerHTML = '<option value="">Todas</option>';
 
     (data.cidades || []).forEach((cidade) => {
       const opt = document.createElement("option");
@@ -587,6 +592,9 @@ async function carregarCidades(estado) {
     });
   } catch (err) {
     console.error("Erro ao carregar cidades", err);
+  } finally {
+    const wrapper = filtroCidade.closest(".select");
+    if (wrapper) wrapper.classList.remove("is-loading");
   }
 }
 
