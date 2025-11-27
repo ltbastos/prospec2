@@ -100,6 +100,50 @@ function getProductColor(nome) {
   return color;
 }
 
+function showToast(message, type = "error", title = "Aviso") {
+  const container = document.getElementById("toast-container");
+  if (!container) {
+    alert(message);
+    return;
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+
+  const icon = document.createElement("div");
+  icon.className = "toast-icon";
+  icon.textContent = type === "success" ? "✓" : type === "warning" ? "!" : "!";
+
+  const content = document.createElement("div");
+  content.className = "toast-content";
+  const titleEl = document.createElement("div");
+  titleEl.className = "toast-title";
+  titleEl.textContent = title;
+  const msgEl = document.createElement("div");
+  msgEl.className = "toast-message";
+  msgEl.textContent = message;
+  content.appendChild(titleEl);
+  content.appendChild(msgEl);
+
+  const btnClose = document.createElement("button");
+  btnClose.className = "toast-close";
+  btnClose.type = "button";
+  btnClose.innerHTML = "&times;";
+
+  toast.appendChild(icon);
+  toast.appendChild(content);
+  toast.appendChild(btnClose);
+  container.appendChild(toast);
+
+  const removeToast = () => {
+    toast.style.animation = "toast-out 160ms ease-in forwards";
+    setTimeout(() => toast.remove(), 160);
+  };
+
+  btnClose.addEventListener("click", removeToast);
+  setTimeout(removeToast, 4200);
+}
+
 /* ---------- CHAMADA API EMPRESAS (lista/filtros) ---------- */
 
 async function buscarEmpresasApi(pagina = 1) {
@@ -113,7 +157,11 @@ async function buscarEmpresasApi(pagina = 1) {
   const isCnpjDireto = cnpjDigits.length === 14;
 
   if (!isCnpjDireto && !cidade) {
-    alert("Selecione ao menos a cidade ou informe um CNPJ completo para pesquisar.");
+    showToast(
+      "Selecione ao menos a cidade ou informe um CNPJ completo para pesquisar.",
+      "warning",
+      "Faltou selecionar a cidade"
+    );
     return;
   }
 
@@ -139,13 +187,13 @@ async function buscarEmpresasApi(pagina = 1) {
       data = rawText ? JSON.parse(rawText) : {};
     } catch (parseErr) {
       console.error("Resposta não é JSON válido", rawText);
-      alert("Resposta inesperada do servidor.");
+      showToast("Resposta inesperada do servidor.", "error", "Algo deu errado");
       return;
     }
 
     if (!resp.ok) {
       console.error(data);
-      alert(data?.erro || "Erro ao buscar empresas.");
+      showToast(data?.erro || "Erro ao buscar empresas.", "error", "Busca não concluída");
       return;
     }
 
@@ -173,7 +221,7 @@ async function buscarEmpresasApi(pagina = 1) {
     atualizarPaginacao();
   } catch (err) {
     console.error(err);
-    alert("Falha na comunicação com o servidor.");
+    showToast("Falha na comunicação com o servidor.", "error", "Sem conexão");
   } finally {
     stopLoading();
   }
@@ -190,13 +238,17 @@ async function carregarEmpresasIniciais() {
       data = rawText ? JSON.parse(rawText) : {};
     } catch (parseErr) {
       console.error("Resposta inicial não é JSON válido", rawText);
-      alert("Resposta inesperada ao carregar empresas iniciais.");
+      showToast(
+        "Resposta inesperada ao carregar empresas iniciais.",
+        "error",
+        "Não foi possível carregar"
+      );
       return;
     }
 
     if (!resp.ok) {
       console.error(data);
-      alert("Erro ao carregar empresas iniciais.");
+      showToast(data?.erro || "Erro ao carregar empresas iniciais.", "error", "Carregamento falhou");
       return;
     }
 
@@ -214,7 +266,7 @@ async function carregarEmpresasIniciais() {
     atualizarPaginacao();
   } catch (err) {
     console.error(err);
-    alert("Falha ao carregar empresas iniciais.");
+    showToast("Falha ao carregar empresas iniciais.", "error", "Sem conexão");
   } finally {
     stopLoading();
   }

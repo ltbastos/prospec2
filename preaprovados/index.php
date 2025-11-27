@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
   <div id="loading-overlay" class="loading-overlay" aria-hidden="true">
     <div class="loading-content">
       <div class="spinner"></div>

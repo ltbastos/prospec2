@@ -175,6 +175,7 @@ function formatarMoeda($valor) {
   />
 </head>
 <body>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
   <header class="app-header">
     <div class="app-header-inner">
       <div class="brand">
@@ -355,6 +356,50 @@ function formatarMoeda($valor) {
     const formComentario = document.getElementById("form-comentario");
     const btnAdicionarComentario = document.getElementById("btn-adicionar-comentario");
 
+    function showToast(message, type = "error", title = "Aviso") {
+      const container = document.getElementById("toast-container");
+      if (!container) {
+        alert(message);
+        return;
+      }
+
+      const toast = document.createElement("div");
+      toast.className = `toast ${type}`;
+
+      const icon = document.createElement("div");
+      icon.className = "toast-icon";
+      icon.textContent = type === "success" ? "✓" : type === "warning" ? "!" : "!";
+
+      const content = document.createElement("div");
+      content.className = "toast-content";
+      const titleEl = document.createElement("div");
+      titleEl.className = "toast-title";
+      titleEl.textContent = title;
+      const msgEl = document.createElement("div");
+      msgEl.className = "toast-message";
+      msgEl.textContent = message;
+      content.appendChild(titleEl);
+      content.appendChild(msgEl);
+
+      const btnClose = document.createElement("button");
+      btnClose.className = "toast-close";
+      btnClose.type = "button";
+      btnClose.innerHTML = "&times;";
+
+      toast.appendChild(icon);
+      toast.appendChild(content);
+      toast.appendChild(btnClose);
+      container.appendChild(toast);
+
+      const removeToast = () => {
+        toast.style.animation = "toast-out 160ms ease-in forwards";
+        setTimeout(() => toast.remove(), 160);
+      };
+
+      btnClose.addEventListener("click", removeToast);
+      setTimeout(removeToast, 4200);
+    }
+
     function formatarDataComentario(dataStr) {
       if (!dataStr) return "";
       const data = new Date(dataStr.replace(" ", "T"));
@@ -444,7 +489,7 @@ function formatarMoeda($valor) {
       const comentario = document.getElementById("comentario-texto").value.trim();
 
       if (!nome || !comentario) {
-        alert("Preencha nome e comentário.");
+        showToast("Preencha nome e comentário.", "warning", "Campos obrigatórios");
         return;
       }
 
@@ -461,14 +506,23 @@ function formatarMoeda($valor) {
         const data = await resp.json();
         if (!resp.ok) {
           console.error(data);
-          alert(data.mensagem || "Erro ao salvar comentário.");
+          showToast(
+            data.mensagem || "Erro ao salvar comentário.",
+            "error",
+            "Não foi possível salvar"
+          );
           return;
         }
         formComentario.reset();
+        showToast("Comentário salvo com sucesso.", "success", "Pronto!");
         await carregarComentarios();
       } catch (err) {
         console.error(err);
-        alert("Falha na comunicação ao salvar comentário.");
+        showToast(
+          "Falha na comunicação ao salvar comentário.",
+          "error",
+          "Sem conexão"
+        );
       } finally {
         btnAdicionarComentario.disabled = false;
       }
@@ -490,13 +544,18 @@ function formatarMoeda($valor) {
         const data = await resp.json();
         if (!resp.ok) {
           console.error(data);
-          alert(data.mensagem || "Não foi possível excluir o comentário.");
+          showToast(
+            data.mensagem || "Não foi possível excluir o comentário.",
+            "error",
+            "Exclusão falhou"
+          );
           return;
         }
+        showToast("Comentário excluído.", "success", "Removido");
         await carregarComentarios();
       } catch (err) {
         console.error(err);
-        alert("Erro ao excluir comentário.");
+        showToast("Erro ao excluir comentário.", "error", "Não foi possível excluir");
       }
     }
 
