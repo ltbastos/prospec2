@@ -72,14 +72,14 @@ if ($produto > 0) {
     $typesProdutos   .= "i";
 }
 
+// subquery base de pré-aprovados (filtra primeiro por produto, permitindo uso do índice em cnpj)
+$subPreaprovados = "SELECT DISTINCT f.cnpj FROM f_preaprovados f WHERE 1=1" . $condicoesProdutos;
+
 // total de empresas distintas
 $countSql = "SELECT COUNT(*) AS total
              FROM d_empresas e
-             WHERE 1=1" . $condicoesEmpresa . "
-             AND EXISTS (
-                SELECT 1 FROM f_preaprovados f
-                WHERE f.cnpj = e.cnpj" . $condicoesProdutos . "
-             )";
+             INNER JOIN (" . $subPreaprovados . ") fp ON fp.cnpj = e.cnpj
+             WHERE 1=1" . $condicoesEmpresa;
 
 $stmtCount = $mysqli->prepare($countSql);
 if (!$stmtCount) {
@@ -88,16 +88,18 @@ if (!$stmtCount) {
     exit;
 }
 
+// parâmetros do count: primeiro os do subselect (produto), depois filtros de empresa
 $paramsCount = [];
 $typesCount  = "";
+
+if (!empty($paramsProdutos)) {
+    $paramsCount = array_merge($paramsCount, $paramsProdutos);
+    $typesCount .= $typesProdutos;
+}
 
 if (!empty($paramsEmpresa)) {
     $paramsCount = array_merge($paramsCount, $paramsEmpresa);
     $typesCount .= $typesEmpresa;
-}
-if (!empty($paramsProdutos)) {
-    $paramsCount = array_merge($paramsCount, $paramsProdutos);
-    $typesCount .= $typesProdutos;
 }
 
 if (!empty($paramsCount)) {
@@ -126,21 +128,21 @@ $listaSql = "SELECT
                 e.cod_cnae,
                 e.cnae
               FROM d_empresas e
+              INNER JOIN (" . $subPreaprovados . ") fp ON fp.cnpj = e.cnpj
               WHERE 1=1" . $condicoesEmpresa . "
-              AND EXISTS (
-                SELECT 1 FROM f_preaprovados f
-                WHERE f.cnpj = e.cnpj" . $condicoesProdutos . "
-              )
               ORDER BY e.razao_social
               LIMIT ? OFFSET ?";
 
-$paramsLista = $paramsEmpresa;
-$typesLista  = $typesEmpresa;
+$paramsLista = [];
+$typesLista  = "";
 
 if (!empty($paramsProdutos)) {
     $paramsLista = array_merge($paramsLista, $paramsProdutos);
     $typesLista .= $typesProdutos;
 }
+
+$paramsLista = array_merge($paramsLista, $paramsEmpresa);
+$typesLista .= $typesEmpresa;
 
 $typesLista .= "ii";
 $paramsLista[] = $porPagina;
