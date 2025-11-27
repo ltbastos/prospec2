@@ -504,10 +504,22 @@ async function carregarEstados() {
 
 async function carregarCidades(estado) {
   if (!filtroCidade) return;
-  filtroCidade.innerHTML = '<option value="">Todas</option>';
+  filtroCidade.innerHTML = "";
   filtroBairro.innerHTML = '<option value="">Todos</option>';
 
-  if (!estado) return;
+  if (!estado) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "Selecione um estado";
+    opt.disabled = true;
+    opt.selected = true;
+    filtroCidade.appendChild(opt);
+    filtroCidade.disabled = false;
+    return;
+  }
+
+  filtroCidade.disabled = false;
+  filtroCidade.innerHTML = '<option value="">Todas</option>';
 
   try {
     const resp = await fetch(
@@ -622,7 +634,7 @@ if (btnToggleFiltros && filtrosColapsaveis) {
 if (btnLimparFiltros) {
   btnLimparFiltros.addEventListener("click", async () => {
     if (filtroEstado) filtroEstado.value = "";
-    if (filtroCidade) filtroCidade.innerHTML = '<option value="">Todas</option>';
+    if (filtroCidade) await carregarCidades("");
     if (filtroBairro) filtroBairro.innerHTML = '<option value="">Todos</option>';
     if (filtroProduto) filtroProduto.value = "";
     if (campoBusca) campoBusca.value = "";
@@ -716,14 +728,19 @@ if (btnPaginaProxima) {
 window.addEventListener("DOMContentLoaded", async () => {
   startLoading();
   await Promise.all([carregarEstados(), carregarProdutos()]);
+  await carregarCidades(filtroEstado ? filtroEstado.value : "");
   await restaurarFiltros();
   const salvo = recuperarFiltrosEstado();
   const temFiltrosSalvos =
     salvo &&
     Object.keys(salvo).length > 0 &&
-    (salvo.estado || salvo.cidade || salvo.bairro || salvo.produto || salvo.pagina > 1);
+    (salvo.estado || salvo.cidade || salvo.bairro || salvo.produto || salvo.busca || salvo.pagina > 1);
 
-  if (temFiltrosSalvos) {
+  const buscaSalva = salvo?.busca?.trim() || "";
+  const cnpjSalvoDigits = buscaSalva.replace(/\D+/g, "");
+  const temCnpjSalvo = cnpjSalvoDigits.length === 14;
+
+  if (temFiltrosSalvos && (salvo.cidade || temCnpjSalvo)) {
     await buscarEmpresasApi(paginaAtual);
   } else {
     await carregarEmpresasIniciais();
