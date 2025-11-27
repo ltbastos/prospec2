@@ -143,9 +143,11 @@ function atualizarResultados(lista, meta = {}) {
   const total = meta.total ?? lista.length;
   const pagina = meta.pagina ?? 1;
   const totalPaginas = meta.totalPaginas ?? 1;
-  const listaExibir = lista;
+  const listaExibir = Array.isArray(lista)
+    ? lista.slice(0, porPagina)
+    : [];
 
-  resultCount.textContent = `${total} resultado${total > 1 ? "s" : ""} • Página ${pagina} de ${totalPaginas}`;
+  resultCount.textContent = `${listaExibir.length} de ${total} resultado${total !== 1 ? "s" : ""} • Página ${pagina} de ${totalPaginas}`;
 
   listaExibir.forEach((e) => {
     const card = document.createElement("a");

@@ -32,6 +32,7 @@ $sqlEmpresa = "
       rua,
       numero,
       complemento,
+      email,
       ddd,
       celular,
       telefone,
@@ -191,14 +192,24 @@ function formatarMoeda($valor) {
               <?php
                 $tel = formatarTelefone($empresa['ddd'], $empresa['telefone']);
                 $cel = formatarTelefone($empresa['ddd'], $empresa['celular']);
+                $email = trim($empresa['email'] ?? '');
+
+                $temAlgumContato = false;
+
                 if ($tel !== '') {
                     echo 'Tel.: ' . htmlspecialchars($tel) . '<br />';
+                    $temAlgumContato = true;
                 }
                 if ($cel !== '') {
-                    echo 'Cel.: ' . htmlspecialchars($cel);
+                    echo 'Cel.: ' . htmlspecialchars($cel) . '<br />';
+                    $temAlgumContato = true;
                 }
-                if ($tel === '' && $cel === '') {
-                    echo 'Sem telefone cadastrado.';
+                if ($email !== '') {
+                    echo 'E-mail: ' . htmlspecialchars($email);
+                    $temAlgumContato = true;
+                }
+                if (!$temAlgumContato) {
+                    echo 'Sem contato cadastrado.';
                 }
               ?>
             </p>
@@ -487,6 +498,14 @@ function formatarMoeda($valor) {
 
       // Marcador da empresa
       L.marker([lat, lng]).addTo(map);
+
+      // corrige tamanho em rolagem ou troca de orientação em mobile
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 200);
+      window.addEventListener("resize", function () {
+        map.invalidateSize();
+      });
     });
   </script>
   <?php endif; ?>
