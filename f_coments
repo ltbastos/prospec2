@@ -1,0 +1,13 @@
+-- preaprovados_f_comentarios definição
+CREATE TABLE `f_comentarios` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `cnpj` char(14) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nome` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `juncao` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `comentario` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `data` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_comentarios_cnpj_data` (`cnpj`,`data`),
+  CONSTRAINT `fk_comentarios_empresa`
+    FOREIGN KEY (`cnpj`) REFERENCES `d_empresas` (`cnpj`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
