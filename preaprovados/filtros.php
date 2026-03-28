@@ -59,6 +59,17 @@ if ($tipo === 'estados') {
         $stmt->close();
         echo json_encode(['bairros' => $bairros]);
     }
+} elseif ($tipo === 'produtos') {
+    $sql = "SELECT id, nome FROM d_produtos ORDER BY ordem, nome";
+    $res = $mysqli->query($sql);
+    $produtos = [];
+    while ($row = $res->fetch_assoc()) {
+        $produtos[] = [
+            'id' => (int) $row['id'],
+            'nome' => $row['nome']
+        ];
+    }
+    echo json_encode(['produtos' => $produtos]);
 } else {
     echo json_encode(['erro' => 'Tipo de filtro inválido.']);
 }
