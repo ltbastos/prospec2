@@ -59,6 +59,28 @@ if ($tipo === 'estados') {
         $stmt->close();
         echo json_encode(['bairros' => $bairros]);
     }
+} elseif ($tipo === 'cnaes') {
+    $sql = "SELECT DISTINCT cod_cnae, cnae FROM d_empresas WHERE cod_cnae IS NOT NULL AND cod_cnae <> '' ORDER BY cod_cnae";
+    $res = $mysqli->query($sql);
+    $cnaes = [];
+    while ($row = $res->fetch_assoc()) {
+        $cnaes[] = [
+            'codigo' => $row['cod_cnae'],
+            'descricao' => $row['cnae']
+        ];
+    }
+    echo json_encode(['cnaes' => $cnaes]);
+} elseif ($tipo === 'produtos') {
+    $sql = "SELECT id, nome FROM d_produtos ORDER BY ordem, nome";
+    $res = $mysqli->query($sql);
+    $produtos = [];
+    while ($row = $res->fetch_assoc()) {
+        $produtos[] = [
+            'id' => (int) $row['id'],
+            'nome' => $row['nome']
+        ];
+    }
+    echo json_encode(['produtos' => $produtos]);
 } else {
     echo json_encode(['erro' => 'Tipo de filtro inválido.']);
 }
