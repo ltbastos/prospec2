@@ -5,12 +5,128 @@ const resultCount = document.getElementById("result-count");
 const filtroEstado = document.getElementById("filtro-estado");
 const filtroCidade = document.getElementById("filtro-cidade");
 const filtroBairro = document.getElementById("filtro-bairro");
+const filtroCnae = document.getElementById("filtro-cnae");
+const filtroProduto = document.getElementById("filtro-produto");
 const legendContainer = document.getElementById("legend-produtos");
 const btnLimparFiltros = document.getElementById("btn-limpar-filtros");
+const btnAplicarFiltros = document.getElementById("btn-aplicar-filtros");
+const btnPaginaAnterior = document.getElementById("btn-pagina-anterior");
+const btnPaginaProxima = document.getElementById("btn-pagina-proxima");
+const paginationInfo = document.getElementById("pagination-info");
+const loadingOverlay = document.getElementById("loading-overlay");
+const inlineSpinner = document.getElementById("inline-spinner");
+const filtrosColapsaveis = document.getElementById("filtros-colapsaveis");
+const btnToggleFiltros = document.getElementById("btn-toggle-filtros");
 
 let empresasCache = [];
 let chartProdutos = null;
 let autocompleteAbortController = null;
+let paginaAtual = 1;
+let totalPaginas = 1;
+let totalResultados = 0;
+const porPagina = 20;
+const STORAGE_KEY = "preaprovados-filtros";
+let loadingCount = 0;
+const PRODUCT_COLORS = [
+  "#cc092f",
+  "#1b2563",
+  "#10b981",
+  "#fbbf24",
+  "#6366f1",
+  "#ec4899",
+  "#14b8a6",
+  "#f97316",
+  "#4b5563"
+];
+const productColorMap = new Map();
+const EMPRESAS_FIXAS = [
+  {
+    cnpj: "00000000000191",
+    razao_social: "Empresa Exemplo Alpha",
+    estado: "SP",
+    cidade: "São Paulo",
+    bairro: "Centro",
+    produtos: [
+      { nome: "Capital de Giro PJ", valor: 150000 },
+      { nome: "Conta Garantida", valor: 80000 }
+    ]
+  },
+  {
+    cnpj: "00000000000272",
+    razao_social: "Empresa Exemplo Beta",
+    estado: "RJ",
+    cidade: "Rio de Janeiro",
+    bairro: "Botafogo",
+    produtos: [{ nome: "Cartão Empresarial", valor: 20000 }]
+  },
+  {
+    cnpj: "00000000000353",
+    razao_social: "Empresa Exemplo Gamma",
+    estado: "MG",
+    cidade: "Belo Horizonte",
+    bairro: "Savassi",
+    produtos: [
+      { nome: "Antecipação de Recebíveis", valor: 120000 },
+      { nome: "Capital de Giro PJ", valor: 70000 }
+    ]
+  },
+  {
+    cnpj: "00000000000434",
+    razao_social: "Empresa Exemplo Delta",
+    estado: "PR",
+    cidade: "Curitiba",
+    bairro: "Batel",
+    produtos: [{ nome: "Financiamento", valor: 300000 }]
+  },
+  {
+    cnpj: "00000000000515",
+    razao_social: "Empresa Exemplo Épsilon",
+    estado: "RS",
+    cidade: "Porto Alegre",
+    bairro: "Moinhos de Vento",
+    produtos: [{ nome: "Leasing", valor: 95000 }]
+  },
+  {
+    cnpj: "00000000000696",
+    razao_social: "Empresa Exemplo Zeta",
+    estado: "BA",
+    cidade: "Salvador",
+    bairro: "Barra",
+    produtos: [{ nome: "Conta Garantida", valor: 40000 }]
+  },
+  {
+    cnpj: "00000000000777",
+    razao_social: "Empresa Exemplo Eta",
+    estado: "PE",
+    cidade: "Recife",
+    bairro: "Boa Viagem",
+    produtos: [{ nome: "Capital de Giro PJ", valor: 60000 }]
+  },
+  {
+    cnpj: "00000000000858",
+    razao_social: "Empresa Exemplo Theta",
+    estado: "CE",
+    cidade: "Fortaleza",
+    bairro: "Meireles",
+    produtos: [{ nome: "Cartão Empresarial", valor: 25000 }]
+  },
+  {
+    cnpj: "00000000000939",
+    razao_social: "Empresa Exemplo Iota",
+    estado: "DF",
+    cidade: "Brasília",
+    bairro: "Asa Sul",
+    produtos: [{ nome: "Antecipação de Recebíveis", valor: 50000 }]
+  },
+  {
+    cnpj: "00000000001010",
+    razao_social: "Empresa Exemplo Kappa",
+    estado: "SC",
+    cidade: "Florianópolis",
+    bairro: "Centro",
+    produtos: [{ nome: "Financiamento", valor: 180000 }]
+  }
+];
 
 /* ---------- HELPERS ---------- */
 
@@ -22,24 +138,91 @@ function formatarMoeda(valor) {
   });
 }
 
+function startLoading() {
+  loadingCount += 1;
+  if (loadingOverlay) {
+    loadingOverlay.classList.add("is-visible");
+  }
+}
+
+function stopLoading() {
+  loadingCount = Math.max(0, loadingCount - 1);
+  if (loadingCount === 0 && loadingOverlay) {
+    loadingOverlay.classList.remove("is-visible");
+  }
+}
+
+function salvarFiltrosEstado(estado) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(estado));
+  } catch (err) {
+    console.warn("Não foi possível salvar filtros", err);
+  }
+}
+
+function recuperarFiltrosEstado() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    console.warn("Não foi possível carregar filtros", err);
+    return {};
+  }
+}
+
+function mostrarInlineSpinner(mostrar) {
+  if (!inlineSpinner) return;
+  if (mostrar) {
+    inlineSpinner.classList.add("is-visible");
+  } else {
+    inlineSpinner.classList.remove("is-visible");
+  }
+}
+
+function getProductColor(nome) {
+  if (!nome) return PRODUCT_COLORS[0];
+  if (productColorMap.has(nome)) {
+    return productColorMap.get(nome);
+  }
+  const color = PRODUCT_COLORS[productColorMap.size % PRODUCT_COLORS.length];
+  productColorMap.set(nome, color);
+  return color;
+}
+
 /* ---------- CHAMADA API EMPRESAS (lista/filtros) ---------- */
 
-async function buscarEmpresasApi() {
+async function buscarEmpresasApi(pagina = 1) {
   const estado = filtroEstado ? filtroEstado.value : "";
   const cidade = filtroCidade ? filtroCidade.value : "";
   const bairro = filtroBairro ? filtroBairro.value : "";
+  const cnae = filtroCnae ? filtroCnae.value : "";
+  const produto = filtroProduto ? filtroProduto.value : "";
 
   const params = new URLSearchParams();
   if (estado) params.append("estado", estado);
   if (cidade) params.append("cidade", cidade);
   if (bairro) params.append("bairro", bairro);
+  if (cnae) params.append("cnae", cnae);
+  if (produto) params.append("produto", produto);
+  params.append("pagina", pagina.toString());
+  params.append("por_pagina", porPagina.toString());
 
   const url =
     "buscar_empresas.php" + (params.toString() ? "?" + params.toString() : "");
 
+  startLoading();
   try {
     const resp = await fetch(url);
-    const data = await resp.json();
+    const rawText = await resp.text();
+
+    let data;
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (parseErr) {
+      console.error("Resposta não é JSON válido", rawText);
+      alert("Resposta inesperada do servidor.");
+      return;
+    }
 
     if (!resp.ok) {
       console.error(data);
@@ -48,18 +231,38 @@ async function buscarEmpresasApi() {
     }
 
     empresasCache = data.empresas || [];
+    paginaAtual = data.pagina || 1;
+    totalPaginas = data.total_paginas || 1;
+    totalResultados = data.total ?? empresasCache.length;
 
-    atualizarResultados(empresasCache);
+    salvarFiltrosEstado({
+      estado,
+      cidade,
+      bairro,
+      cnae,
+      produto,
+      pagina: paginaAtual,
+      filtrosFechados: filtrosColapsaveis?.classList.contains("is-collapsed")
+    });
+
+    atualizarResultados(empresasCache, {
+      total: totalResultados,
+      pagina: paginaAtual,
+      totalPaginas
+    });
     atualizarGrafico(empresasCache);
+    atualizarPaginacao();
   } catch (err) {
     console.error(err);
     alert("Falha na comunicação com o servidor.");
+  } finally {
+    stopLoading();
   }
 }
 
 /* ---------- RESULTADOS DA LISTA ---------- */
 
-function atualizarResultados(lista) {
+function atualizarResultados(lista, meta = {}) {
   listaResultados.innerHTML = "";
 
   if (!lista || !lista.length) {
@@ -67,15 +270,14 @@ function atualizarResultados(lista) {
     return;
   }
 
-  const maxExibir = 10;
-  const total = lista.length;
-  const listaExibir = lista.slice(0, maxExibir);
+  const total = meta.total ?? lista.length;
+  const pagina = meta.pagina ?? 1;
+  const totalPaginas = meta.totalPaginas ?? 1;
+  const listaExibir = Array.isArray(lista)
+    ? lista.slice(0, porPagina)
+    : [];
 
-  if (total > maxExibir) {
-    resultCount.textContent = `${total} resultados (exibindo ${maxExibir} primeiros)`;
-  } else {
-    resultCount.textContent = `${total} resultado${total > 1 ? "s" : ""}`;
-  }
+  resultCount.textContent = `${listaExibir.length} de ${total} resultado${total !== 1 ? "s" : ""} • Página ${pagina} de ${totalPaginas}`;
 
   listaExibir.forEach((e) => {
     const card = document.createElement("a");
@@ -83,14 +285,15 @@ function atualizarResultados(lista) {
     card.href = `detalhes.php?cnpj=${encodeURIComponent(e.cnpj)}`;
 
     const chipsHtml = (e.produtos || [])
-      .map(
-        (p, index) => `
-        <span class="chip ${index === 0 ? "" : "secondary"}">
+      .map((p) => {
+        const color = getProductColor(p.nome);
+        return `
+        <span class="chip" style="--chip-color:${color}">
           <span class="chip-dot"></span>
           ${p.nome}
           <span class="chip-value">${formatarMoeda(p.valor)}</span>
-        </span>`
-      )
+        </span>`;
+      })
       .join("");
 
     card.innerHTML = `
@@ -145,6 +348,7 @@ async function buscarSugestoes(query) {
 
   if (!q || q.length < 2) {
     listaAutocomplete.style.display = "none";
+    mostrarInlineSpinner(false);
     return;
   }
 
@@ -153,6 +357,8 @@ async function buscarSugestoes(query) {
     autocompleteAbortController.abort();
   }
   autocompleteAbortController = new AbortController();
+
+  mostrarInlineSpinner(true);
 
   try {
     const resp = await fetch(
@@ -172,7 +378,23 @@ async function buscarSugestoes(query) {
       return;
     }
     console.error("Erro no autocomplete", err);
+  } finally {
+    mostrarInlineSpinner(false);
   }
+}
+
+function mostrarEmpresasFixas() {
+  empresasCache = EMPRESAS_FIXAS;
+  paginaAtual = 1;
+  totalPaginas = 1;
+  totalResultados = EMPRESAS_FIXAS.length;
+  atualizarResultados(EMPRESAS_FIXAS, {
+    total: EMPRESAS_FIXAS.length,
+    pagina: 1,
+    totalPaginas: 1
+  });
+  atualizarGrafico(EMPRESAS_FIXAS);
+  atualizarPaginacao();
 }
 
 if (campoBusca) {
@@ -204,6 +426,40 @@ function calcularQuantidadePorProduto(lista) {
   return contagem;
 }
 
+const donutDataLabels = {
+  id: "donutDataLabels",
+  afterDatasetDraw(chart) {
+    const {
+      ctx,
+      data: { datasets }
+    } = chart;
+    const meta = chart.getDatasetMeta(0);
+    if (!meta || !datasets[0]) return;
+
+    ctx.save();
+    ctx.font = "600 12px 'Inter', 'Segoe UI', sans-serif";
+    ctx.fillStyle = "#0f172a";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    meta.data.forEach((arc, idx) => {
+      const value = Number(datasets[0].data[idx]);
+      if (!value) return;
+      const props = arc.getProps(
+        ["x", "y", "startAngle", "endAngle", "innerRadius", "outerRadius"],
+        true
+      );
+      const angle = (props.startAngle + props.endAngle) / 2;
+      const radius = props.innerRadius + (props.outerRadius - props.innerRadius) * 0.55;
+      const x = props.x + Math.cos(angle) * radius;
+      const y = props.y + Math.sin(angle) * radius;
+      ctx.fillText(value, x, y);
+    });
+
+    ctx.restore();
+  }
+};
+
 function atualizarGrafico(lista) {
   const canvas = document.getElementById("chart-produtos");
   if (!canvas || typeof Chart === "undefined") return;
@@ -215,8 +471,10 @@ function atualizarGrafico(lista) {
 
   // calcula contagem por produto
   const contagem = calcularQuantidadePorProduto(lista);
-  const labels = Object.keys(contagem);
-  const valores = Object.values(contagem);
+  const labels = Object.keys(contagem).sort();
+  const valores = labels.map((label) => contagem[label]);
+
+  labels.forEach((label) => getProductColor(label));
 
   // se não tiver nada, destrói gráfico existente e sai
   if (!labels.length) {
@@ -226,16 +484,6 @@ function atualizarGrafico(lista) {
     }
     return;
   }
-
-  const cores = [
-    "#cc092f",
-    "#1b2563",
-    "#10b981",
-    "#fbbf24",
-    "#6366f1",
-    "#ec4899",
-    "#14b8a6"
-  ];
 
   // destrói gráfico antigo se existir
   if (chartProdutos) {
@@ -250,7 +498,7 @@ function atualizarGrafico(lista) {
       datasets: [
         {
           data: valores,
-          backgroundColor: cores.slice(0, labels.length),
+          backgroundColor: labels.map((label) => getProductColor(label)),
           borderWidth: 1,
           borderColor: "#ffffff"
         }
@@ -258,23 +506,27 @@ function atualizarGrafico(lista) {
     },
     options: {
       plugins: {
-        legend: { display: false } // esconde legenda nativa do Chart.js
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.label}: ${ctx.raw}`
+          }
+        }
       },
-      cutout: "72%" // rosca mais fina
-    }
+      cutout: "72%"
+    },
+    plugins: [donutDataLabels]
   });
 
   // monta a legenda HTML com N de empresas por produto
   if (legendContainer) {
-    labels.forEach((label, idx) => {
-      const qtd = valores[idx]; // quantidade de empresas naquele produto
-
+    labels.forEach((label) => {
       const item = document.createElement("div");
       item.className = "chart-legend-item";
       item.innerHTML = `
-        <span class="chart-legend-dot" style="background-color:${cores[idx]}"></span>
+        <span class="chart-legend-dot" style="background-color:${getProductColor(label)}"></span>
         <span class="chart-legend-label">
-          ${label} (${qtd})
+          ${label}
         </span>
       `;
       legendContainer.appendChild(item);
@@ -354,13 +606,51 @@ async function carregarBairros(estado, cidade) {
   }
 }
 
-/* Eventos dos filtros: toda mudança já dispara busca */
+async function carregarCnaes() {
+  if (!filtroCnae) return;
+  try {
+    const resp = await fetch("filtros.php?tipo=cnaes");
+    const data = await resp.json();
+
+    filtroCnae.innerHTML = '<option value="">Todos</option>';
+
+    (data.cnaes || []).forEach((item) => {
+      const opt = document.createElement("option");
+      opt.value = item.codigo;
+      const descricao = item.descricao ? ` - ${item.descricao}` : "";
+      opt.textContent = `${item.codigo}${descricao}`;
+      filtroCnae.appendChild(opt);
+    });
+  } catch (err) {
+    console.error("Erro ao carregar CNAEs", err);
+  }
+}
+
+async function carregarProdutos() {
+  if (!filtroProduto) return;
+  try {
+    const resp = await fetch("filtros.php?tipo=produtos");
+    const data = await resp.json();
+
+    filtroProduto.innerHTML = '<option value="">Todos</option>';
+
+    (data.produtos || []).forEach((item) => {
+      const opt = document.createElement("option");
+      opt.value = item.id;
+      opt.textContent = item.nome;
+      filtroProduto.appendChild(opt);
+    });
+  } catch (err) {
+    console.error("Erro ao carregar produtos", err);
+  }
+}
+
+/* Eventos dos filtros encadeados */
 
 if (filtroEstado) {
   filtroEstado.addEventListener("change", () => {
     const uf = filtroEstado.value;
     carregarCidades(uf);
-    buscarEmpresasApi();
   });
 }
 
@@ -369,13 +659,37 @@ if (filtroCidade) {
     const uf = filtroEstado.value;
     const cidade = filtroCidade.value;
     carregarBairros(uf, cidade);
-    buscarEmpresasApi();
   });
 }
 
-if (filtroBairro) {
-  filtroBairro.addEventListener("change", () => {
-    buscarEmpresasApi();
+function atualizarToggleEstado(isCollapsed) {
+  if (!filtrosColapsaveis || !btnToggleFiltros) return;
+  filtrosColapsaveis.classList.toggle("is-collapsed", isCollapsed);
+  btnToggleFiltros.classList.toggle("is-collapsed", isCollapsed);
+  const icon = btnToggleFiltros.querySelector(".toggle-icon");
+  if (icon) {
+    icon.textContent = isCollapsed ? "▶" : "▼";
+  }
+}
+
+if (btnToggleFiltros && filtrosColapsaveis) {
+  btnToggleFiltros.addEventListener("click", () => {
+    const isCollapsed = !filtrosColapsaveis.classList.contains("is-collapsed");
+    atualizarToggleEstado(isCollapsed);
+    const estado = filtroEstado ? filtroEstado.value : "";
+    const cidade = filtroCidade ? filtroCidade.value : "";
+    const bairro = filtroBairro ? filtroBairro.value : "";
+    const cnae = filtroCnae ? filtroCnae.value : "";
+    const produto = filtroProduto ? filtroProduto.value : "";
+    salvarFiltrosEstado({
+      estado,
+      cidade,
+      bairro,
+      cnae,
+      produto,
+      pagina: paginaAtual,
+      filtrosFechados: isCollapsed
+    });
   });
 }
 
@@ -386,18 +700,110 @@ if (btnLimparFiltros) {
     if (filtroEstado) filtroEstado.value = "";
     if (filtroCidade) filtroCidade.innerHTML = '<option value="">Todas</option>';
     if (filtroBairro) filtroBairro.innerHTML = '<option value="">Todos</option>';
+    if (filtroCnae) filtroCnae.value = "";
+    if (filtroProduto) filtroProduto.value = "";
     if (campoBusca) campoBusca.value = "";
     if (listaAutocomplete) {
       listaAutocomplete.innerHTML = "";
       listaAutocomplete.style.display = "none";
     }
-    buscarEmpresasApi();
+    sessionStorage.removeItem(STORAGE_KEY);
+    paginaAtual = 1;
+    mostrarEmpresasFixas();
+  });
+}
+
+/* ---------- APLICAR FILTROS ---------- */
+
+if (btnAplicarFiltros) {
+  btnAplicarFiltros.addEventListener("click", () => {
+    paginaAtual = 1;
+    buscarEmpresasApi(paginaAtual);
+  });
+}
+
+/* ---------- PAGINAÇÃO ---------- */
+
+function atualizarPaginacao() {
+  if (paginationInfo) {
+    paginationInfo.textContent = `Página ${paginaAtual} de ${totalPaginas}`;
+  }
+
+  if (btnPaginaAnterior) {
+    btnPaginaAnterior.disabled = paginaAtual <= 1;
+  }
+  if (btnPaginaProxima) {
+    btnPaginaProxima.disabled = paginaAtual >= totalPaginas;
+  }
+}
+
+async function restaurarFiltros() {
+  const salvo = recuperarFiltrosEstado();
+  if (!salvo || Object.keys(salvo).length === 0) return;
+
+  if (filtroEstado && salvo.estado) {
+    filtroEstado.value = salvo.estado;
+    await carregarCidades(salvo.estado);
+  }
+
+  if (filtroCidade && salvo.cidade) {
+    filtroCidade.value = salvo.cidade;
+    await carregarBairros(salvo.estado, salvo.cidade);
+  }
+
+  if (filtroBairro && salvo.bairro) {
+    filtroBairro.value = salvo.bairro;
+  }
+
+  if (filtroCnae && salvo.cnae) {
+    filtroCnae.value = salvo.cnae;
+  }
+
+  if (filtroProduto && salvo.produto) {
+    filtroProduto.value = salvo.produto;
+  }
+
+  if (salvo.pagina) {
+    paginaAtual = salvo.pagina;
+  }
+
+  if (typeof salvo.filtrosFechados !== "undefined") {
+    atualizarToggleEstado(Boolean(salvo.filtrosFechados));
+  }
+}
+
+if (btnPaginaAnterior) {
+  btnPaginaAnterior.addEventListener("click", () => {
+    if (paginaAtual > 1) {
+      buscarEmpresasApi(paginaAtual - 1);
+    }
+  });
+}
+
+if (btnPaginaProxima) {
+  btnPaginaProxima.addEventListener("click", () => {
+    if (paginaAtual < totalPaginas) {
+      buscarEmpresasApi(paginaAtual + 1);
+    }
   });
 }
 
 /* ---------- INICIAL ---------- */
 
-window.addEventListener("DOMContentLoaded", () => {
-  carregarEstados();
-  buscarEmpresasApi(); // primeira carga da lista + gráfico
+window.addEventListener("DOMContentLoaded", async () => {
+  startLoading();
+  await Promise.all([carregarEstados(), carregarProdutos(), carregarCnaes()]);
+  await restaurarFiltros();
+  const salvo = recuperarFiltrosEstado();
+  const temFiltrosSalvos =
+    salvo &&
+    Object.keys(salvo).length > 0 &&
+    (salvo.estado || salvo.cidade || salvo.bairro || salvo.cnae || salvo.produto || salvo.pagina > 1);
+
+  if (temFiltrosSalvos) {
+    await buscarEmpresasApi(paginaAtual);
+  } else {
+    mostrarEmpresasFixas();
+  }
+  stopLoading();
 });
