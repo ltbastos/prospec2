@@ -7,10 +7,18 @@ const filtroCidade = document.getElementById("filtro-cidade");
 const filtroBairro = document.getElementById("filtro-bairro");
 const legendContainer = document.getElementById("legend-produtos");
 const btnLimparFiltros = document.getElementById("btn-limpar-filtros");
+const btnAplicarFiltros = document.getElementById("btn-aplicar-filtros");
+const btnPaginaAnterior = document.getElementById("btn-pagina-anterior");
+const btnPaginaProxima = document.getElementById("btn-pagina-proxima");
+const paginationInfo = document.getElementById("pagination-info");
 
 let empresasCache = [];
 let chartProdutos = null;
 let autocompleteAbortController = null;
+let paginaAtual = 1;
+let totalPaginas = 1;
+let totalResultados = 0;
+const porPagina = 20;
 
 /* ---------- HELPERS ---------- */
 
@@ -24,7 +32,7 @@ function formatarMoeda(valor) {
 
 /* ---------- CHAMADA API EMPRESAS (lista/filtros) ---------- */
 
-async function buscarEmpresasApi() {
+async function buscarEmpresasApi(pagina = 1) {
   const estado = filtroEstado ? filtroEstado.value : "";
   const cidade = filtroCidade ? filtroCidade.value : "";
   const bairro = filtroBairro ? filtroBairro.value : "";
@@ -33,6 +41,8 @@ async function buscarEmpresasApi() {
   if (estado) params.append("estado", estado);
   if (cidade) params.append("cidade", cidade);
   if (bairro) params.append("bairro", bairro);
+  params.append("pagina", pagina.toString());
+  params.append("por_pagina", porPagina.toString());
 
   const url =
     "buscar_empresas.php" + (params.toString() ? "?" + params.toString() : "");
@@ -48,9 +58,17 @@ async function buscarEmpresasApi() {
     }
 
     empresasCache = data.empresas || [];
+    paginaAtual = data.pagina || 1;
+    totalPaginas = data.total_paginas || 1;
+    totalResultados = data.total ?? empresasCache.length;
 
-    atualizarResultados(empresasCache);
+    atualizarResultados(empresasCache, {
+      total: totalResultados,
+      pagina: paginaAtual,
+      totalPaginas
+    });
     atualizarGrafico(empresasCache);
+    atualizarPaginacao();
   } catch (err) {
     console.error(err);
     alert("Falha na comunicação com o servidor.");
@@ -59,7 +77,7 @@ async function buscarEmpresasApi() {
 
 /* ---------- RESULTADOS DA LISTA ---------- */
 
-function atualizarResultados(lista) {
+function atualizarResultados(lista, meta = {}) {
   listaResultados.innerHTML = "";
 
   if (!lista || !lista.length) {
@@ -67,15 +85,12 @@ function atualizarResultados(lista) {
     return;
   }
 
-  const maxExibir = 10;
-  const total = lista.length;
-  const listaExibir = lista.slice(0, maxExibir);
+  const total = meta.total ?? lista.length;
+  const pagina = meta.pagina ?? 1;
+  const totalPaginas = meta.totalPaginas ?? 1;
+  const listaExibir = lista;
 
-  if (total > maxExibir) {
-    resultCount.textContent = `${total} resultados (exibindo ${maxExibir} primeiros)`;
-  } else {
-    resultCount.textContent = `${total} resultado${total > 1 ? "s" : ""}`;
-  }
+  resultCount.textContent = `${total} resultado${total > 1 ? "s" : ""} • Página ${pagina} de ${totalPaginas}`;
 
   listaExibir.forEach((e) => {
     const card = document.createElement("a");
@@ -360,7 +375,6 @@ if (filtroEstado) {
   filtroEstado.addEventListener("change", () => {
     const uf = filtroEstado.value;
     carregarCidades(uf);
-    buscarEmpresasApi();
   });
 }
 
@@ -369,13 +383,6 @@ if (filtroCidade) {
     const uf = filtroEstado.value;
     const cidade = filtroCidade.value;
     carregarBairros(uf, cidade);
-    buscarEmpresasApi();
-  });
-}
-
-if (filtroBairro) {
-  filtroBairro.addEventListener("change", () => {
-    buscarEmpresasApi();
   });
 }
 
@@ -391,7 +398,48 @@ if (btnLimparFiltros) {
       listaAutocomplete.innerHTML = "";
       listaAutocomplete.style.display = "none";
     }
-    buscarEmpresasApi();
+    paginaAtual = 1;
+    buscarEmpresasApi(paginaAtual);
+  });
+}
+
+/* ---------- APLICAR FILTROS ---------- */
+
+if (btnAplicarFiltros) {
+  btnAplicarFiltros.addEventListener("click", () => {
+    paginaAtual = 1;
+    buscarEmpresasApi(paginaAtual);
+  });
+}
+
+/* ---------- PAGINAÇÃO ---------- */
+
+function atualizarPaginacao() {
+  if (paginationInfo) {
+    paginationInfo.textContent = `Página ${paginaAtual} de ${totalPaginas}`;
+  }
+
+  if (btnPaginaAnterior) {
+    btnPaginaAnterior.disabled = paginaAtual <= 1;
+  }
+  if (btnPaginaProxima) {
+    btnPaginaProxima.disabled = paginaAtual >= totalPaginas;
+  }
+}
+
+if (btnPaginaAnterior) {
+  btnPaginaAnterior.addEventListener("click", () => {
+    if (paginaAtual > 1) {
+      buscarEmpresasApi(paginaAtual - 1);
+    }
+  });
+}
+
+if (btnPaginaProxima) {
+  btnPaginaProxima.addEventListener("click", () => {
+    if (paginaAtual < totalPaginas) {
+      buscarEmpresasApi(paginaAtual + 1);
+    }
   });
 }
 

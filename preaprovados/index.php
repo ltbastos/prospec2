@@ -73,6 +73,9 @@
             </div>
 
             <div class="search-actions">
+              <button type="button" id="btn-aplicar-filtros" class="btn-primary">
+                Aplicar filtros
+              </button>
               <button type="button" id="btn-limpar-filtros" class="btn-link">
                 Limpar filtros
               </button>
@@ -90,6 +93,16 @@
           </div>
 
           <div id="lista-resultados" class="results-list"></div>
+
+          <div class="pagination-bar">
+            <button type="button" id="btn-pagina-anterior" class="btn-secondary">
+              Anterior
+            </button>
+            <span id="pagination-info" class="pagination-info">Página 1 de 1</span>
+            <button type="button" id="btn-pagina-proxima" class="btn-secondary">
+              Próxima
+            </button>
+          </div>
         </section>
       </div>
 
