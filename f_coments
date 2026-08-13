@@ -11,3 +11,7 @@ CREATE TABLE `f_comentarios` (
   CONSTRAINT `fk_comentarios_empresa`
     FOREIGN KEY (`cnpj`) REFERENCES `d_empresas` (`cnpj`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+
+https://teams.microsoft.com/meet/291626573610615?p=MhS6r3H8ljHchjWu5v
